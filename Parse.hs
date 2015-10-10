@@ -5,17 +5,17 @@ import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Number
 
 parseFile :: FilePath -> String -> Either ParseError [Expr]
-parseFile f xs = parse parseExprs f (concat $ map space xs)
-  where space c
-            | c == '.'  = " . "
-            | otherwise = [c]
+parseFile f xs = parse parseExprs f xs
 
 parseExprs :: Parser [Expr]
-parseExprs = spaces *> (parseExpr `sepEndBy` space)
+parseExprs = spaces *> many (parseExpr <* spaces)
 
 parseExpr :: Parser Expr
 parseExpr = Call <$ char '.'
         <|> Add <$ char '+'
+        <|> Sub <$ char '-'
+        <|> Mul <$ char '*'
+        <|> Div <$ char '/'
         <|> try (parseNamedBlock)
         <|> parseAnonBlock
         <|> Lit <$> parseLit

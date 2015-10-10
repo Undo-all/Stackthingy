@@ -1,14 +1,15 @@
 module Compile where
 
-import Parse
-import Codegen
 import Asm
 import Ast
-import Text.ParserCombinators.Parsec (ParseError)
+import Error
+import Parse
+import Codegen
 
-compile :: FilePath -> String -> Either ParseError String
+compile :: FilePath -> String -> Either Error String
 compile f xs =
     case parseFile f xs of
-      Right exps -> Right . pp . runCodegen $ generate exps
-      Left err   -> Left err
+      Right exps -> pp <$> runCodegen (generate exps)
+      Left err   -> Left (WhileParsing err)
+
 

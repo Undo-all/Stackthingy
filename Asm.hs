@@ -16,6 +16,9 @@ module Asm
 , int
 , mov
 , add
+, sub
+, mul
+, idiv
 , label
 , global
 , section
@@ -67,6 +70,9 @@ data Asm = Push Arg
          | Mov Arg Arg
          | Jmp Arg
          | Add Arg Arg
+         | Sub Arg Arg
+         | Mul Arg Arg
+         | IDiv Arg Arg
          | Interrupt Arg
          | DefLabel String
          | Global String
@@ -81,6 +87,9 @@ instance Pretty Asm where
     pp (Mov x y)     = "\tmov " ++ pp x ++ ", " ++ pp y
     pp (Jmp x)       = "\tjmp " ++ pp x
     pp (Add x y)     = "\tadd " ++ pp x ++ ", " ++ pp y
+    pp (Sub x y)     = "\tsub " ++ pp x ++ ", " ++ pp y
+    pp (Mul x y)     = "\tmul " ++ pp x ++ ", " ++ pp y
+    pp (IDiv x y)    = "\tidiv " ++ pp x ++ ", " ++ pp y
     pp (Interrupt x) = "\tint " ++ pp x
     pp (DefLabel l)  = l ++ ":"
     pp (Global l)    = "global " ++ l
@@ -105,9 +114,12 @@ push x = tell [Push x]
 pop x  = tell [Pop x]
 jmp x  = tell [Jmp x]
 int x  = tell [Interrupt x]
-mov, add :: (Monad m) => Arg -> Arg -> AsmGenT m ()
+mov, add, sub, mul, idiv :: (Monad m) => Arg -> Arg -> AsmGenT m ()
 mov x y = tell [Mov x y]
 add x y = tell [Add x y]
+sub x y = tell [Sub x y]
+mul x y = tell [Mul x y]
+idiv x y = tell [IDiv x y]
 label, global :: (Monad m) => String -> AsmGenT m ()
 label x  = tell [DefLabel x]
 global x = tell [Global x]

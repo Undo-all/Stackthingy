@@ -4,29 +4,28 @@ module Codegen where
 
 import Asm
 import Ast
+import Error
 import Data.String
 import Control.Monad.State
+import Control.Monad.Except
 import qualified Data.Map as M
+import qualified Data.Set as S
 
 data CodegenState = CodegenState
-                  { anonBlocks :: Int
-                  , calls      :: Int
+                  { anonBlocks  :: Int
+                  , calls       :: Int
+                  , namedBlocks :: S.Set String
                   } deriving (Eq, Show)
 
-type Codegen = AsmGenT (State CodegenState)
+type Codegen = AsmGenT (StateT CodegenState (Except Error))
 
-runCodegen :: Codegen a -> [Asm]
-runCodegen cg = evalState (runAsmGenT cg) defaultState
-  where defaultState = CodegenState 0 0
-
-binop x = do
-    pop rax
-    pop rbx
-    x rax rbx
-    push rax
+runCodegen :: Codegen a -> Either Error [Asm]
+runCodegen cg = runExcept $ evalStateT (runAsmGenT cg) defaultState
+  where defaultState = CodegenState 0 0 S.empty
 
 generate :: [Expr] -> Codegen ()
 generate xs = do
+    modify $ \cg -> cg { namedBlocks = findNames xs }
     section Text
     global "_start"
     label "_start"
@@ -34,6 +33,15 @@ generate xs = do
     mov rax 1
     mov rbx 0
     int 0x80
+  where findNames                     = foldl insertName S.empty
+        insertName s (NamedBlock n _) = S.insert n s
+        insertName s _                = s
+
+binop x = do
+    pop rax
+    pop rbx
+    x rax rbx
+    push rax
 
 genBlock :: String -> [Expr] -> Codegen ()
 genBlock blk body = do
@@ -46,9 +54,17 @@ genBlock blk body = do
 
 gen :: Expr -> Codegen ()
 gen (Lit (Int i))   = push (fromIntegral i)
-gen (Lit (Ident l)) = push (fromString ('_':l))
+gen (Lit (Ident l)) = do
+    names <- gets namedBlocks
+    if S.member l names
+      then push (fromString ('_':l))
+      else throwError (NotFound l)
 
 gen Add = binop add
+gen Sub = binop sub
+gen Mul = binop mul
+gen Div = binop idiv
+
 gen (NamedBlock name xs) = genBlock ('_':name) xs
 gen (AnonBlock xs) = do
     n <- gets anonBlocks
