@@ -30,9 +30,9 @@ generate xs = do
     global "_start"
     label "_start"
     mapM_ gen xs
-    mov rax 1
-    mov rbx 0
-    int 0x80
+    mov rax 60
+    mov rdi 0
+    syscall
   where findNames                     = foldl insertName S.empty
         insertName s (NamedBlock n _) = S.insert n s
         insertName s _                = s
@@ -49,7 +49,7 @@ genBlock blk body = do
     jmp (fromString end)
     label blk
     mapM_ gen body
-    jmp rdx
+    jmp rbp
     label end
 
 gen :: Expr -> Codegen ()
@@ -62,8 +62,16 @@ gen (Lit (Ident l)) = do
 
 gen Add = binop add
 gen Sub = binop sub
-gen Mul = binop mul
+gen Mul = binop imul
 gen Div = binop idiv
+
+gen Outchr = do
+    mov rax 1
+    mov rdi 1
+    mov rsi rsp
+    mov rdx 1
+    syscall
+    add rsp 4
 
 gen (NamedBlock name xs) = genBlock ('_':name) xs
 gen (AnonBlock xs) = do
@@ -78,7 +86,7 @@ gen Call = do
     modify $ \cg -> cg { calls = n + 1 }
     let after = "after_call_" ++ show n
     pop rax
-    mov rdx (fromString after)
+    mov rbp (fromString after)
     jmp rax
     label after
 

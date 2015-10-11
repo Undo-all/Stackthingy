@@ -16,6 +16,7 @@ parseExpr = Call <$ char '.'
         <|> Sub <$ char '-'
         <|> Mul <$ char '*'
         <|> Div <$ char '/'
+        <|> Outchr <$ char '~'
         <|> try (parseNamedBlock)
         <|> parseAnonBlock
         <|> Lit <$> parseLit

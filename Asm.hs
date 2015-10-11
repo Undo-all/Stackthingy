@@ -10,14 +10,18 @@ module Asm
 , rbx
 , rcx
 , rdx
+, rdi
+, rsi
+, rsp
+, rbp
 , push
 , pop
 , jmp
-, int
+, syscall
 , mov
 , add
 , sub
-, mul
+, imul
 , idiv
 , label
 , global
@@ -36,6 +40,10 @@ data Reg = Rax
          | Rbx
          | Rcx
          | Rdx
+         | Rdi
+         | Rsi
+         | Rsp
+         | Rbp
          deriving (Eq, Show)
 
 instance Pretty Reg where
@@ -43,6 +51,10 @@ instance Pretty Reg where
     pp Rbx = "rbx"
     pp Rcx = "rcx"
     pp Rdx = "rdx"
+    pp Rdi = "rdi"
+    pp Rsi = "rsi"
+    pp Rsp = "rsp"
+    pp Rbp = "rbp"
 
 data Arg = Reg Reg
          | Int Int
@@ -71,9 +83,9 @@ data Asm = Push Arg
          | Jmp Arg
          | Add Arg Arg
          | Sub Arg Arg
-         | Mul Arg Arg
+         | IMul Arg Arg
          | IDiv Arg Arg
-         | Interrupt Arg
+         | Syscall
          | DefLabel String
          | Global String
          | Section Section
@@ -88,9 +100,9 @@ instance Pretty Asm where
     pp (Jmp x)       = "\tjmp " ++ pp x
     pp (Add x y)     = "\tadd " ++ pp x ++ ", " ++ pp y
     pp (Sub x y)     = "\tsub " ++ pp x ++ ", " ++ pp y
-    pp (Mul x y)     = "\tmul " ++ pp x ++ ", " ++ pp y
+    pp (IMul x y)    = "\timul " ++ pp x ++ ", " ++ pp y
     pp (IDiv x y)    = "\tidiv " ++ pp x ++ ", " ++ pp y
-    pp (Interrupt x) = "\tint " ++ pp x
+    pp Syscall       = "\tsyscall"
     pp (DefLabel l)  = l ++ ":"
     pp (Global l)    = "global " ++ l
     pp (Section t)   = "section " ++ if t == Text then ".text" else ".data"
@@ -108,17 +120,22 @@ rax = Reg Rax
 rbx = Reg Rbx
 rcx = Reg Rcx
 rdx = Reg Rdx
+rdi = Reg Rdi
+rsi = Reg Rsi
+rsp = Reg Rsp
+rbp = Reg Rbp
 
-push, pop, jmp, int :: (Monad m) => Arg -> AsmGenT m ()
+syscall :: (Monad m) => AsmGenT m ()
+syscall = tell [Syscall]
+push, pop, jmp :: (Monad m) => Arg -> AsmGenT m ()
 push x = tell [Push x]
 pop x  = tell [Pop x]
 jmp x  = tell [Jmp x]
-int x  = tell [Interrupt x]
-mov, add, sub, mul, idiv :: (Monad m) => Arg -> Arg -> AsmGenT m ()
+mov, add, sub, imul, idiv :: (Monad m) => Arg -> Arg -> AsmGenT m ()
 mov x y = tell [Mov x y]
 add x y = tell [Add x y]
 sub x y = tell [Sub x y]
-mul x y = tell [Mul x y]
+imul x y = tell [IMul x y]
 idiv x y = tell [IDiv x y]
 label, global :: (Monad m) => String -> AsmGenT m ()
 label x  = tell [DefLabel x]

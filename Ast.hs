@@ -7,6 +7,7 @@ data Expr = Lit Lit
           | Sub
           | Mul
           | Div
+          | Outchr
           | Call
           deriving (Eq, Show)
 
