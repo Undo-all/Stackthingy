@@ -1,6 +1,7 @@
 module Parse (parseFile) where
 
 import Ast
+import Data.Char
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Number
 
@@ -16,7 +17,7 @@ parseExpr = Call <$ char '.'
         <|> Sub <$ char '-'
         <|> Mul <$ char '*'
         <|> Div <$ char '/'
-        <|> Outchr <$ char '~'
+        <|> Outchr <$ char '#'
         <|> try (parseNamedBlock)
         <|> parseAnonBlock
         <|> Lit <$> parseLit
@@ -46,6 +47,24 @@ parseAnonBlock = do
 
 parseLit :: Parser Lit
 parseLit = Int <$> int
+       <|> Char <$> parseChar
        <|> Ident <$> parseName
        <?> "literal"
+
+parseChar :: Parser Char
+parseChar = do
+    char '\''
+    c <- parseEscapedChar <|> anyChar
+    char '\''
+    return c
+
+parseEscapedChar :: Parser Char
+parseEscapedChar = do
+    char '\\'
+    choice [ chr <$> int
+           , '\n' <$ char 'n'
+           , '\r' <$ char 'r'
+           , '\t' <$ char 't'
+           , '\f' <$ char 'f'
+           ]
 

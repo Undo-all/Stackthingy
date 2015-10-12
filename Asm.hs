@@ -29,6 +29,7 @@ module Asm
 , peephole
 ) where
 
+import Data.List
 import Data.String
 import Control.Monad.Writer
 import Data.List (intercalate)
@@ -144,7 +145,18 @@ section :: (Monad m) => Section -> AsmGenT m ()
 section s = tell [Section s]
 
 peephole :: [Asm] -> [Asm]
-peephole []                    = []
-peephole ((Push x):(Pop r):xs) = Mov r x : peephole xs
-peephole (x:xs)                = x : peephole xs
+peephole xs = reduce xs [] [] 
 
+reduce [] pops pushes            = makeMovs pushes pops []
+reduce ((Push x):xs) pops pushes = reduce xs pops (x:pushes) 
+reduce ((Pop x):xs) pops pushes  = reduce xs (x:pops) pushes 
+reduce (x:xs) pops pushes 
+    | null pushes && null pops = x : reduce xs [] []
+    | null pushes              = (map Pop pops) ++ [x] ++ reduce xs [] [] 
+    | null pops                = (map Push pushes) ++ [x] ++ reduce xs [] [] 
+    | otherwise                = makeMovs pushes pops (x : reduce xs [] [])
+
+makeMovs pushes pops rest =
+    let (pushes', leftover') = splitAt (length pops) (reverse pushes)
+        leftover           = map Push leftover'
+    in leftover ++ map (uncurry Mov) (zip pops pushes') ++ rest

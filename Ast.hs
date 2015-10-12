@@ -12,6 +12,7 @@ data Expr = Lit Lit
           deriving (Eq, Show)
 
 data Lit = Int Int
+         | Char Char
          | Ident String
          deriving (Eq, Show)
 

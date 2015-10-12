@@ -5,6 +5,7 @@ module Codegen where
 import Asm
 import Ast
 import Error
+import Data.Char
 import Data.String
 import Control.Monad.State
 import Control.Monad.Except
@@ -54,6 +55,7 @@ genBlock blk body = do
 
 gen :: Expr -> Codegen ()
 gen (Lit (Int i))   = push (fromIntegral i)
+gen (Lit (Char c))  = push (fromIntegral (ord c))
 gen (Lit (Ident l)) = do
     names <- gets namedBlocks
     if S.member l names
