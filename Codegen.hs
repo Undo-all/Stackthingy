@@ -15,6 +15,7 @@ import qualified Data.Set as S
 data CodegenState = CodegenState
                   { anonBlocks  :: Int
                   , calls       :: Int
+                  , branches    :: Int
                   , namedBlocks :: S.Set String
                   } deriving (Eq, Show)
 
@@ -22,7 +23,7 @@ type Codegen = AsmGenT (StateT CodegenState (Except Error))
 
 runCodegen :: Codegen a -> Either Error [Asm]
 runCodegen cg = runExcept $ evalStateT (runAsmGenT cg) defaultState
-  where defaultState = CodegenState 0 0 S.empty
+  where defaultState = CodegenState 0 0 0 S.empty
 
 generate :: [Expr] -> Codegen ()
 generate xs = do
@@ -53,6 +54,16 @@ genBlock blk body = do
     jmp rbp
     label end
 
+call :: Codegen ()
+call = do
+    n <- gets calls
+    modify $ \cg -> cg { calls = n + 1 }
+    let after = "after_call_" ++ show n
+    pop rax
+    mov rbp (fromString after)
+    jmp rax
+    label after
+
 gen :: Expr -> Codegen ()
 gen (Lit (Int i))   = push (fromIntegral i)
 gen (Lit (Char c))  = push (fromIntegral (ord c))
@@ -66,6 +77,16 @@ gen Add = binop add
 gen Sub = binop sub
 gen Mul = binop imul
 gen Div = binop idiv
+
+gen If = do
+    n <- gets branches
+    let branch = "branch" ++ show n 
+    pop rax
+    test rax rax
+    je (fromString branch)
+    add rsp 8
+    label branch
+    call  
 
 gen Outchr = do
     mov rax 1
@@ -83,12 +104,5 @@ gen (AnonBlock xs) = do
     genBlock name xs
     push (fromString name)
 
-gen Call = do
-    n <- gets calls
-    modify $ \cg -> cg { calls = n + 1 }
-    let after = "after_call_" ++ show n
-    pop rax
-    mov rbp (fromString after)
-    jmp rax
-    label after
+gen Call = call
 

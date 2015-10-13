@@ -17,6 +17,8 @@ module Asm
 , push
 , pop
 , jmp
+, je
+, test
 , syscall
 , mov
 , add
@@ -82,6 +84,8 @@ data Asm = Push Arg
          | Pop Arg
          | Mov Arg Arg
          | Jmp Arg
+         | Je Arg
+         | Test Arg Arg
          | Add Arg Arg
          | Sub Arg Arg
          | IMul Arg Arg
@@ -99,6 +103,8 @@ instance Pretty Asm where
     pp (Pop a)       = "\tpop " ++ pp a
     pp (Mov x y)     = "\tmov " ++ pp x ++ ", " ++ pp y
     pp (Jmp x)       = "\tjmp " ++ pp x
+    pp (Je x)        = "\tje " ++ pp x
+    pp (Test x y)    = "\ttest " ++ pp x ++ ", " ++ pp y
     pp (Add x y)     = "\tadd " ++ pp x ++ ", " ++ pp y
     pp (Sub x y)     = "\tsub " ++ pp x ++ ", " ++ pp y
     pp (IMul x y)    = "\timul " ++ pp x ++ ", " ++ pp y
@@ -128,16 +134,18 @@ rbp = Reg Rbp
 
 syscall :: (Monad m) => AsmGenT m ()
 syscall = tell [Syscall]
-push, pop, jmp :: (Monad m) => Arg -> AsmGenT m ()
+push, pop, jmp, je :: (Monad m) => Arg -> AsmGenT m ()
 push x = tell [Push x]
 pop x  = tell [Pop x]
 jmp x  = tell [Jmp x]
-mov, add, sub, imul, idiv :: (Monad m) => Arg -> Arg -> AsmGenT m ()
+je x   = tell [Je x]
+mov, add, sub, imul, idiv, test :: (Monad m) => Arg -> Arg -> AsmGenT m ()
 mov x y = tell [Mov x y]
 add x y = tell [Add x y]
 sub x y = tell [Sub x y]
 imul x y = tell [IMul x y]
 idiv x y = tell [IDiv x y]
+test x y = tell [Test x y]
 label, global :: (Monad m) => String -> AsmGenT m ()
 label x  = tell [DefLabel x]
 global x = tell [Global x]
