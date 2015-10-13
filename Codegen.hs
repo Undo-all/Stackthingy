@@ -80,13 +80,18 @@ gen Div = binop idiv
 
 gen If = do
     n <- gets branches
-    let branch = "branch" ++ show n 
+    let f = "branch" ++ show n ++ "_f"
+        end = "branch" ++ show n ++ "_end"
     pop rax
     test rax rax
-    je (fromString branch)
+    je (fromString f)
     add rsp 8
-    label branch
-    call  
+    call
+    jmp (fromString end)
+    label f
+    call
+    add rsp 8
+    label end
 
 gen Outchr = do
     mov rax 1

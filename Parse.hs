@@ -13,14 +13,9 @@ parseExprs = spaces *> many (parseExpr <* spaces)
 
 parseExpr :: Parser Expr
 parseExpr = Call <$ char '.'
-        <|> Add <$ char '+'
-        <|> Sub <$ char '-'
-        <|> Mul <$ char '*'
-        <|> Div <$ char '/'
-        <|> Outchr <$ char '#'
-        <|> If <$ char '?'
         <|> try (parseNamedBlock)
         <|> parseAnonBlock
+        <|> parseIdent
         <|> Lit <$> parseLit
         <?> "expression"
 
@@ -34,7 +29,7 @@ parseNamedBlock = do
 
 parseName :: Parser String
 parseName = do
-    let legal = ['a'..'z'] ++ ['A'..'Z'] ++ "_"
+    let legal = ['a'..'z'] ++ ['A'..'Z'] ++ "_+-*/#"
     first <- oneOf legal
     rest  <- many (oneOf (legal ++ ['0'..'9']))
     return $ first : rest
@@ -46,10 +41,21 @@ parseAnonBlock = do
     char ')'
     return $ AnonBlock contents
 
+parseIdent :: Parser Expr
+parseIdent = do
+    ident <- parseName
+    case ident of
+      "+" -> return Add
+      "-" -> return Sub
+      "*" -> return Mul
+      "/" -> return Div
+      "#" -> return Outchr
+      "if" -> return If
+      _    -> return $ Lit (Ident ident)
+
 parseLit :: Parser Lit
 parseLit = Int <$> int
        <|> Char <$> parseChar
-       <|> Ident <$> parseName
        <?> "literal"
 
 parseChar :: Parser Char
